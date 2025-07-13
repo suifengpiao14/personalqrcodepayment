@@ -1,0 +1,8 @@
+go 1.22
+
+use(
+
+.
+/Users/admin/Documents/go/sqlbuilder
+/Users/admin/Documents/go/keyvalue
+)
