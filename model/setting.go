@@ -37,13 +37,36 @@ func getTableSetting() sqlbuilder.TableConfig {
 	return table_setting
 }
 
-func NewSettingSerivce() keyvalue.KeyValueService {
+type SettingSerivce struct {
+	keyvalue.KeyValueService
+}
+
+func NewSettingService() *SettingSerivce {
 	dbColumnRefer := keyvalue.KeyValueDbColumnRefer{
 		Key:   "vkey",
 		Value: "vvalue",
 	}
-	service := keyvalue.NewKeyValueService(getTableSetting(), dbColumnRefer)
+	kvservice := keyvalue.NewKeyValueService(getTableSetting(), dbColumnRefer)
+	service := &SettingSerivce{kvservice}
 	return service
+}
+
+func (s SettingSerivce) GetSignKey() (signKey string, err error) {
+	value, err := s.KeyValueService.Get("key", nil)
+	if err != nil {
+		return "", err
+	}
+	signKey = value.String()
+	return signKey, nil
+}
+
+func (s SettingSerivce) GetOrderExpire() (closeTime int, err error) {
+	value, err := s.KeyValueService.Get("close", nil)
+	if err != nil {
+		return 0, err
+	}
+	closeTime = value.Int()
+	return closeTime, nil
 }
 
 func init() {
