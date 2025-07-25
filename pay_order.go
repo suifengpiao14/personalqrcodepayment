@@ -13,15 +13,29 @@ import (
 	"github.com/suifengpiao14/personalqrcodepayment/model"
 )
 
-type PayOrderService struct{}
+type PayOrderService struct {
+	config Config
+}
+
+func NewPayOrderService(config Config) PayOrderService {
+	return PayOrderService{
+		config: config,
+	}
+
+}
 
 type PayOrderCreateIn struct {
 	PayId       string `json:"payId"`
-	PayingAgent string `json:"payingAgent"` // 支付机构 1:微信 2:支付宝
-	OrderPrice  int    `json:"orderPrice"`  // 订单金额，单位分
+	PayingAgent string `json:"payingAgent"` // 支付机构 weixin:微信 alipay:支付宝
+	OrderAmount int    `json:"orderPrice"`  // 订单金额，单位分
 	Sign        string `json:"sign"`
 	Param       string `json:"param"`
 }
+
+const (
+	PayingAgent_Wechat = "weixin"
+	PayingAgent_Alipay = "alipay"
+)
 
 type PayOrder struct {
 	PayId       string        `json:"payId"`
@@ -91,17 +105,18 @@ type Config struct {
 }
 
 // Create 创建订单
-func (s PayOrderService) Create(in PayOrderCreateIn, cfg Config) (out *PayOrder, err error) {
+func (s PayOrderService) Create(in PayOrderCreateIn) (out *PayOrder, err error) {
 	err = in.Validate()
 	if err != nil {
 		return nil, err
 	}
+	cfg := s.config
 	// 验证签名
-	if in.Sign != Signature(in.PayId, in.Param, in.PayingAgent, in.OrderPrice, cfg.Key) {
+	if in.Sign != Signature(in.PayId, in.Param, in.PayingAgent, in.OrderAmount, cfg.Key) {
 		return nil, errors.New("签名验证失败")
 	}
 	tmpPriceSerivice := model.NewTmpPriceSerivce()
-	realPrice := in.OrderPrice
+	realPrice := in.OrderAmount
 	orderId := OrderIDGenerator()
 	isFindTmpPrice := false
 	settingService := model.NewSettingService()
@@ -163,7 +178,7 @@ func (s PayOrderService) Create(in PayOrderCreateIn, cfg Config) (out *PayOrder,
 		Param:       in.Param,
 		PayId:       in.PayId,
 		PayUrl:      payUrl,
-		Price:       in.OrderPrice,
+		Price:       in.OrderAmount,
 		PaidPrice:   realPrice,
 		ReturnUrl:   cfg.ReturnUrl,
 		State:       PayOrderModel_state_pending.String(),
@@ -206,7 +221,7 @@ func (req *PayOrderCreateIn) Validate() error {
 	}
 
 	// 验证price
-	if req.OrderPrice <= 0 {
+	if req.OrderAmount <= 0 {
 		return errors.New("订单金额必须大于0")
 	}
 
@@ -385,6 +400,9 @@ func (s PayOrderService) Failed(payId string) (err error) {
 	}
 	stateFSM := record.GetStateFSM()
 	err = stateFSM.CanPay()
+	if err != nil {
+		return err
+	}
 
 	r := model.NewPayOrderRepository()
 	err = r.Failed(record.PayId, PayOrderModel_state_failed.String(), record.State.String())

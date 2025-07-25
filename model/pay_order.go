@@ -72,6 +72,23 @@ var table_pay_order = sqlbuilder.NewTableConfig("pay_order").AddColumns(
 	sqlbuilder.NewColumn("return_url", sqlbuilder.GetField(NewReturnUrl)),
 	sqlbuilder.NewColumn("state", sqlbuilder.GetField(NewState)),
 	sqlbuilder.NewColumn("paying_agent", sqlbuilder.GetField(NewPayingAgent)),
+).AddIndexs(sqlbuilder.Index{
+	IsPrimary: true,
+	ColumnNames: func(tableColumns sqlbuilder.ColumnConfigs) (columnNames []string) {
+		return []string{"id"}
+	},
+},
+	sqlbuilder.Index{
+		Unique: true,
+		ColumnNames: func(tableColumns sqlbuilder.ColumnConfigs) (columnNames []string) {
+			return []string{"pay_id"}
+		},
+	},
+	sqlbuilder.Index{
+		ColumnNames: func(tableColumns sqlbuilder.ColumnConfigs) (columnNames []string) {
+			return []string{"order_id"}
+		},
+	},
 )
 
 type PayOrderRepository struct {
