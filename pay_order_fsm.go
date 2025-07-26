@@ -23,11 +23,13 @@ const (
 )
 
 type PayOrderStateMachine struct {
-	State PayOrderState
-	fsm   *fsm.FSM
+	ExtraAttrs []any
+	State      PayOrderState
+	fsm        *fsm.FSM
 }
 
 type StateMachineError struct {
+	ExtraAttrs      []any         `json:"extraAttrs"`
 	Message         string        `json:"message"`
 	CurrentState    PayOrderState `json:"currentState"`
 	AvailableEvents []string      `json:"availableEvents"`
@@ -42,23 +44,29 @@ func (e StateMachineError) Error() string {
 
 func (matchine *PayOrderStateMachine) CanPay() (err error) {
 	if !matchine.fsm.Can(Event_Pay) {
-		err = StateMachineError{
-			Message:         "当前状态不可支付",
-			CurrentState:    matchine.State,
-			AvailableEvents: matchine.fsm.AvailableTransitions(),
-		}
+		err = matchine.makeError("当前状态不可支付")
 		return err
 	}
 	return nil
 }
-
+func (matchine *PayOrderStateMachine) CanFail() (err error) {
+	if !matchine.fsm.Can(Event_Fail) {
+		err = matchine.makeError("当前状态不可支付")
+		return err
+	}
+	return nil
+}
+func (matchine *PayOrderStateMachine) makeError(message string) (err error) {
+	return StateMachineError{
+		ExtraAttrs:      matchine.ExtraAttrs,
+		Message:         message,
+		CurrentState:    matchine.State,
+		AvailableEvents: matchine.fsm.AvailableTransitions(),
+	}
+}
 func (matchine *PayOrderStateMachine) CanExpire() (err error) {
 	if !matchine.fsm.Can(Event_Expire) {
-		err = StateMachineError{
-			Message:         "当前状态不可过期",
-			CurrentState:    matchine.State,
-			AvailableEvents: matchine.fsm.AvailableTransitions(),
-		}
+		err = matchine.makeError("当前状态不可过期")
 		return err
 	}
 	return nil
@@ -66,18 +74,14 @@ func (matchine *PayOrderStateMachine) CanExpire() (err error) {
 
 func (matchine *PayOrderStateMachine) CanClose() (err error) {
 	if !matchine.fsm.Can(Event_Close) {
-		err = StateMachineError{
-			Message:         "当前状态不可关闭",
-			CurrentState:    matchine.State,
-			AvailableEvents: matchine.fsm.AvailableTransitions(),
-		}
+		err = matchine.makeError("当前状态不可关闭")
 		return err
 	}
 	return nil
 }
 
-func NewPayOrderStateMachine(state PayOrderState) *PayOrderStateMachine {
-	stateMachine := &PayOrderStateMachine{State: state}
+func NewPayOrderStateMachine(state PayOrderState, extraAttrs ...any) *PayOrderStateMachine {
+	stateMachine := &PayOrderStateMachine{State: state, ExtraAttrs: extraAttrs}
 	stateMachine.InitFSM()
 	return stateMachine
 }
