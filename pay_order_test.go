@@ -4,7 +4,12 @@ import (
 	"testing"
 
 	"github.com/suifengpiao14/personalqrcodepayment"
+	"github.com/suifengpiao14/sqlbuilder"
 )
+
+func init() {
+	sqlbuilder.CREATE_TABLE_IF_NOT_EXISTS = true
+}
 
 func TestCrate(t *testing.T) {
 	cfg := personalqrcodepayment.Config{}
