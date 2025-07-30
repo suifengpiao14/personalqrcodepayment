@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/spf13/cast"
+	"github.com/suifengpiao14/paymentrecord"
+	paymentrecordrepository "github.com/suifengpiao14/paymentrecord/repository"
 	"github.com/suifengpiao14/personalqrcodepayment/model"
 )
 
@@ -25,7 +27,8 @@ func NewPayOrderService(config Config) PayOrderService {
 }
 
 type PayOrderCreateIn struct {
-	PayId       string `json:"payId"`
+	OrderId     string `json:"orderId"`
+	RecipientId string `json:"recipientId"` // 收款人ID
 	PayingAgent string `json:"payingAgent"` // 支付机构 weixin:微信 alipay:支付宝
 	OrderAmount int    `json:"orderPrice"`  // 订单金额，单位分
 	Sign        string `json:"sign"`
@@ -112,7 +115,7 @@ func (s PayOrderService) Create(in PayOrderCreateIn) (out *PayOrder, err error) 
 	}
 	cfg := s.config
 	// 验证签名
-	if in.Sign != Signature(in.PayId, in.Param, in.PayingAgent, in.OrderAmount, cfg.Key) {
+	if in.Sign != Signature(in.OrderId, in.Param, in.PayingAgent, in.OrderAmount, cfg.Key) {
 		return nil, errors.New("签名验证失败")
 	}
 	tmpPriceSerivice := model.NewTmpPriceSerivce()
@@ -145,22 +148,21 @@ func (s PayOrderService) Create(in PayOrderCreateIn) (out *PayOrder, err error) 
 	payUrl := cfg.PayUrl
 	isAnyAmount := true
 	payQRCodeService := model.NewPayQRCodeRepository()
-	payQRCodeModel, exists, err := payQRCodeService.GetByPrice(realPrice, in.PayingAgent)
+	payQRCodeModel, err := payQRCodeService.LockQRCodeByOrderId(in.OrderId, in.RecipientId, in.OrderAmount, in.PayingAgent)
 	if err != nil {
 		return nil, err
 	}
-	if exists {
-		isAnyAmount = false
-		payUrl = payQRCodeModel.PayUrl
+	payUrl = payQRCodeModel.PayUrl
+	payRecordCfg := paymentrecord.Config{}
+	var repo = paymentrecordrepository.NewPayOrderRepository(model.DBHander)
+	payrecordService := paymentrecord.NewPayOrderService(payRecordCfg, repo)
+	payRecordIn := paymentrecord.PayOrderCreateIn{
+		OrderId:     in.OrderId,
+		PayingAgent: in.PayingAgent,
+		OrderAmount: in.OrderAmount,
 	}
-
-	payOrderService := model.NewPayOrderRepository()
-	_, exists, err = payOrderService.GetByPayId(in.PayId)
+	payRecord, err := payrecordService.Create(payRecordIn)
 	if err != nil {
-		return nil, err
-	}
-	if exists {
-		err = errors.New("订单已存在")
 		return nil, err
 	}
 
@@ -176,7 +178,7 @@ func (s PayOrderService) Create(in PayOrderCreateIn) (out *PayOrder, err error) 
 		NotifyUrl:   cfg.NotifyUrl,
 		OrderId:     orderId,
 		Param:       in.Param,
-		PayId:       in.PayId,
+		PayId:       in.OrderId,
 		PayUrl:      payUrl,
 		Price:       in.OrderAmount,
 		PaidPrice:   realPrice,
@@ -207,7 +209,7 @@ func (s PayOrderService) Create(in PayOrderCreateIn) (out *PayOrder, err error) 
 // Validate 验证请求参数
 func (req *PayOrderCreateIn) Validate() error {
 	// 验证payId
-	if req.PayId == "" {
+	if req.OrderId == "" {
 		return errors.New("请传入商户订单号")
 	}
 	payingAgent := cast.ToInt(req.PayingAgent)

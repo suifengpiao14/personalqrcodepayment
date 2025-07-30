@@ -9,7 +9,8 @@ require (
 	github.com/looplab/fsm v1.0.3
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cast v1.6.0
-	github.com/suifengpiao14/commonlanguage v0.0.15
+	github.com/suifengpiao14/commonlanguage v0.0.17
+	github.com/suifengpiao14/paymentrecord v0.0.0-20250730020937-fc4841706b0c
 	github.com/suifengpiao14/sqlbuilder v0.1.572
 	gitlab.huishoubao.com/gopackage/keyvalue v0.0.6
 )
@@ -25,7 +26,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.22 // indirect
 	github.com/patrickmn/go-cache v2.1.0+incompatible // indirect
 	github.com/redis/go-redis/v9 v9.7.0 // indirect
-	github.com/suifengpiao14/cache v0.0.8 // indirect
+	github.com/suifengpiao14/cache v0.0.10 // indirect
 	github.com/suifengpiao14/funcs v0.0.25 // indirect
 	github.com/suifengpiao14/memorytable v0.1.2 // indirect
 	golang.org/x/sync v0.10.0 // indirect

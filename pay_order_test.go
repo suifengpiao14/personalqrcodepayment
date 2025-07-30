@@ -8,14 +8,14 @@ import (
 )
 
 func init() {
-	sqlbuilder.CREATE_TABLE_IF_NOT_EXISTS = true
+	sqlbuilder.CreateTableIfNotExists = true
 }
 
 func TestCrate(t *testing.T) {
 	cfg := personalqrcodepayment.Config{}
 	payOrderService := personalqrcodepayment.NewPayOrderService(cfg)
 	payOrderIn := personalqrcodepayment.PayOrderCreateIn{
-		PayId:       "pId2654981",
+		OrderId:     "pId2654981",
 		PayingAgent: personalqrcodepayment.PayingAgent_Wechat,
 		OrderAmount: 10000,
 		Sign:        "54845",

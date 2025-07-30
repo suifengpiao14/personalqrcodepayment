@@ -93,3 +93,7 @@ const (
 func NewPayingAgent(type_ string) *sqlbuilder.Field {
 	return sqlbuilder.NewStringField(type_, "type", "支付类型1-微信，2-支付宝", 0)
 }
+
+func NewLockKey(lockKey string) *sqlbuilder.Field {
+	return sqlbuilder.NewStringField(lockKey, "lockKey", "分布式锁", 64).Comment("当前二维码正在被哪个订单id使用,没有使用为空")
+}

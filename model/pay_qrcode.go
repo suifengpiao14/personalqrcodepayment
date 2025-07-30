@@ -1,6 +1,12 @@
 package model
 
-import "github.com/suifengpiao14/sqlbuilder"
+import (
+	"errors"
+
+	"github.com/suifengpiao14/commonlanguage"
+	paymentrecordrepository "github.com/suifengpiao14/paymentrecord/repository"
+	"github.com/suifengpiao14/sqlbuilder"
+)
 
 /*
 CREATE TABLE `pay_qrcode` (
@@ -12,17 +18,27 @@ CREATE TABLE `pay_qrcode` (
 */
 
 type PayQRCodeModel struct {
-	Id     int64  `json:"id" gorm:"column:id"`
-	PayUrl string `json:"pay_url" gorm:"column:pay_url"`
-	Price  int    `json:"price" gorm:"column:price"`
-	Type   int    `json:"type" gorm:"column:type"`
+	Id            int64  `json:"id" gorm:"column:Fid"`
+	RecipientId   string `json:"recipientId" gorm:"column:Frecipient_id"`
+	RecipientName string `json:"recipientName" gorm:"column:Frecipient_name"`
+	PayUrl        string `json:"pay_url" gorm:"column:Fpay_url"`
+	Amount        int    `json:"amount" gorm:"column:Famount"`
+	PayAgent      int    `json:"payAgent" gorm:"column:FpayAgent"`
+	LockKey       string `json:"lockKey" gorm:"column:Flock_key"`
+	CreatedAt     string `json:"createdAt" gorm:"column:Fcreated_at"`
+	UpdatedAt     string `json:"updatedAt" gorm:"column:Fupdated_at"`
 }
 
 var table_pay_qrcode = sqlbuilder.NewTableConfig("pay_qrcode").WithHandler(DBHander).AddColumns(
-	sqlbuilder.NewColumn("id", sqlbuilder.GetField(NewId)),
-	sqlbuilder.NewColumn("pay_url", sqlbuilder.GetField(NewPayUrl)),
-	sqlbuilder.NewColumn("price", sqlbuilder.GetField(NewPrice)),
-	sqlbuilder.NewColumn("type", sqlbuilder.GetField(NewPayingAgent)),
+	sqlbuilder.NewColumn("Fid", sqlbuilder.GetField(paymentrecordrepository.NewId)),
+	sqlbuilder.NewColumn("Frecipient_id", sqlbuilder.GetField(paymentrecordrepository.NewRecipientId)),
+	sqlbuilder.NewColumn("Frecipient_name", sqlbuilder.GetField(paymentrecordrepository.NewRecipientName)),
+	sqlbuilder.NewColumn("Flock_key", sqlbuilder.GetField(NewLockKey)),
+	sqlbuilder.NewColumn("Fpay_url", sqlbuilder.GetField(paymentrecordrepository.NewPayUrl)),
+	sqlbuilder.NewColumn("Famount", sqlbuilder.GetField(paymentrecordrepository.NewPayAmount)),
+	sqlbuilder.NewColumn("Fpay_agent", sqlbuilder.GetField(paymentrecordrepository.NewPayAgent)),
+	sqlbuilder.NewColumn("Fcreated_at", sqlbuilder.GetField(paymentrecordrepository.NewCreatedAt)),
+	sqlbuilder.NewColumn("Fupdated_at", sqlbuilder.GetField(paymentrecordrepository.NewUpdatedAt)),
 )
 
 type PayQRCodeRepository struct {
@@ -35,15 +51,34 @@ func NewPayQRCodeRepository() PayQRCodeRepository {
 	}
 }
 
-func (s PayQRCodeRepository) GetByPrice(realPrice int, payingAgent string) (payQRCodeModelRef *PayQRCodeModel, exists bool, err error) {
+func (s PayQRCodeRepository) LockQRCodeByOrderId(orderId string, recipientId string, amount int, payAgent string) (payQRCodeModelRef *PayQRCodeModel, err error) {
 	fs := sqlbuilder.Fields{
-		NewPrice(realPrice).AppendWhereFn(sqlbuilder.ValueFnForward),
-		NewPayingAgent(payingAgent).AppendWhereFn(sqlbuilder.ValueFnForward),
+		paymentrecordrepository.NewPayAgent(payAgent).AppendWhereFn(sqlbuilder.ValueFnForward),
+		paymentrecordrepository.NewRecipientId(recipientId).AppendWhereFn(sqlbuilder.ValueFnForward),
+		paymentrecordrepository.NewPayAmount(amount).Apply(func(f *sqlbuilder.Field, fs ...*sqlbuilder.Field) {
+			f.WhereFns.Append(sqlbuilder.ValueFnBetween(nil, amount)) // 支付金额小于等于当前金额的二维码
+			f.SetOrderFn(sqlbuilder.OrderFnDesc)                      // 倒序查询，确保锁定的二维码金额和实际金额最接近
+		}).SetMinimum(1), // 最小金额为1分
+		NewLockKey(orderId).Apply(func(f *sqlbuilder.Field, fs ...*sqlbuilder.Field) {
+			f.WhereFns.ResetSetValueFn(func(inputValue any, f *sqlbuilder.Field, fs ...*sqlbuilder.Field) (any, error) {
+				return "", nil // 查询条件的值改成空字符串,即查找未锁定的记录，增加锁
+			})
+		}),
+		commonlanguage.NewUpdateLimit(1), // 只锁定一条记录即可
 	}
-	payQRCodeModel, exists, err := s.repository.First(fs)
+	err = s.repository.Update(fs)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
 
-	return &payQRCodeModel, exists, nil
+	getFs := sqlbuilder.Fields{
+		NewLockKey(orderId).AppendWhereFn(sqlbuilder.ValueFnForward),
+		paymentrecordrepository.NewPayAgent(payAgent).AppendWhereFn(sqlbuilder.ValueFnForward),
+	}
+	payQRCodeModel, exists, err := s.repository.First(getFs)
+	if !exists {
+		err = errors.New("符合条件的支付码全被占用，请稍后重试")
+		return nil, err
+	}
+	return &payQRCodeModel, nil
 }
