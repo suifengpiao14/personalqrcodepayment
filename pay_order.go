@@ -4,15 +4,13 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"errors"
-	"fmt"
-	"math/rand"
 	"strconv"
-	"time"
 
 	"github.com/spf13/cast"
 	"github.com/suifengpiao14/paymentrecord"
 	paymentrecordrepository "github.com/suifengpiao14/paymentrecord/repository"
 	"github.com/suifengpiao14/personalqrcodepayment/model"
+	"github.com/suifengpiao14/sqlbuilder"
 )
 
 type PayOrderService struct {
@@ -24,15 +22,6 @@ func NewPayOrderService(config Config) PayOrderService {
 		config: config,
 	}
 
-}
-
-type PayOrderCreateIn struct {
-	OrderId     string `json:"orderId"`
-	RecipientId string `json:"recipientId"` // 收款人ID
-	PayingAgent string `json:"payingAgent"` // 支付机构 weixin:微信 alipay:支付宝
-	OrderAmount int    `json:"orderPrice"`  // 订单金额，单位分
-	Sign        string `json:"sign"`
-	Param       string `json:"param"`
 }
 
 const (
@@ -107,6 +96,23 @@ type Config struct {
 	PayUrl    string `json:"payUrl"`
 }
 
+type PayOrderCreateIn struct {
+	PayId            string `json:"payId"`
+	OrderId          string `json:"orderId"`
+	RecipientAccount string `json:"recipientAccount"` // 收款人ID
+	PayAgent         string `json:"payAgent"`         // 支付机构 weixin:微信 alipay:支付宝
+	OrderAmount      int    `json:"orderPrice"`       // 订单金额，单位分
+	UserId           string `json:"userId"`
+	Sign             string `json:"sign"`
+	Param            string `json:"param"`
+	PaymentAccount   string `json:"paymentAccount"`
+	PaymentName      string `json:"paymentName"`
+}
+
+func getPayRecordSerivce() *paymentrecord.PayRecordService {
+	return paymentrecord.NewPayRecordService(model.DBHander)
+}
+
 // Create 创建订单
 func (s PayOrderService) Create(in PayOrderCreateIn) (out *PayOrder, err error) {
 	err = in.Validate()
@@ -115,94 +121,65 @@ func (s PayOrderService) Create(in PayOrderCreateIn) (out *PayOrder, err error) 
 	}
 	cfg := s.config
 	// 验证签名
-	if in.Sign != Signature(in.OrderId, in.Param, in.PayingAgent, in.OrderAmount, cfg.Key) {
+	if in.Sign != Signature(in.OrderId, in.Param, in.PayAgent, in.OrderAmount, cfg.Key) {
 		return nil, errors.New("签名验证失败")
 	}
-	tmpPriceSerivice := model.NewTmpPriceSerivce()
-	realPrice := in.OrderAmount
-	orderId := OrderIDGenerator()
-	isFindTmpPrice := false
 	settingService := model.NewSettingService()
-	for range 10 {
-		tmpPrice := fmt.Sprintf("%d-%s", realPrice, in.PayingAgent)
-		err = tmpPriceSerivice.InsertIgnore(tmpPrice, orderId)
-		if err == nil {
-			isFindTmpPrice = true
-			break
-		}
-		if !errors.Is(err, model.Err_TmpPriceAlreadyExist) {
-			return nil, err
-		}
-		err = nil
-		if cfg.PayQf == 1 {
-			realPrice++
-		} else {
-			realPrice--
-		}
-	}
-	if !isFindTmpPrice {
-		err = errors.New("订单超出负荷，请稍后重试")
-		return nil, err
-	}
-
-	payUrl := cfg.PayUrl
-	isAnyAmount := true
-	payQRCodeService := model.NewPayQRCodeRepository()
-	payQRCodeModel, err := payQRCodeService.LockQRCodeByOrderId(in.OrderId, in.RecipientId, in.OrderAmount, in.PayingAgent)
-	if err != nil {
-		return nil, err
-	}
-	payUrl = payQRCodeModel.PayUrl
-	payRecordCfg := paymentrecord.Config{}
-	var repo = paymentrecordrepository.NewPayOrderRepository(model.DBHander)
-	payrecordService := paymentrecord.NewPayOrderService(payRecordCfg, repo)
-	payRecordIn := paymentrecord.PayOrderCreateIn{
-		OrderId:     in.OrderId,
-		PayingAgent: in.PayingAgent,
-		OrderAmount: in.OrderAmount,
-	}
-	payRecord, err := payrecordService.Create(payRecordIn)
-	if err != nil {
-		return nil, err
-	}
-
-	createdAt := time.Now().Format(time.DateTime)
 	expire, err := settingService.GetOrderExpire()
 	if err != nil {
 		return nil, err
 	}
-	payOrderIn := model.PayOrderAddIn{
-		Expire:      expire,
-		CreatedAt:   createdAt,
-		AnyAmount:   cast.ToInt(isAnyAmount),
-		NotifyUrl:   cfg.NotifyUrl,
-		OrderId:     orderId,
-		Param:       in.Param,
-		PayId:       in.OrderId,
-		PayUrl:      payUrl,
-		Price:       in.OrderAmount,
-		PaidPrice:   realPrice,
-		ReturnUrl:   cfg.ReturnUrl,
-		State:       PayOrderModel_state_pending.String(),
-		PayingAgent: in.PayingAgent,
+
+	payQRCodeService := model.NewPayQRCodeRepository()
+	payQRCodeModel, err := payQRCodeService.LockQRCodeByOrderId(in.OrderId, in.RecipientAccount, in.OrderAmount, in.PayAgent)
+	if err != nil {
+		return nil, err
 	}
-	err = payOrderService.Add(payOrderIn)
+	payrecordService := getPayRecordSerivce()
+	payRecordInForQRPay := paymentrecord.PayRecordCreateIn{
+		OrderId:          in.OrderId,
+		PayAgent:         payQRCodeModel.PayAgent,
+		OrderAmount:      in.OrderAmount,
+		PayAmount:        payQRCodeModel.Amount,
+		Expire:           expire,
+		PayId:            paymentrecord.PayIdGenerator(),
+		PayParam:         "",
+		UserId:           in.UserId,
+		ClientIp:         "127.0.0.1",
+		RecipientAccount: payQRCodeModel.RecipientAccount,
+		RecipientName:    payQRCodeModel.RecipientName,
+		PaymentAccount:   in.PaymentAccount,
+		PaymentName:      in.PaymentName,
+		PayUrl:           payQRCodeModel.PayUrl,
+		NotifyUrl:        "",
+		ReturnUrl:        "",
+		Remark:           "固定金额二维码支付",
+	}
+
+	payRecordInForCoupon := paymentrecord.PayRecordCreateIn{
+		OrderId:          in.OrderId,
+		PayAgent:         paymentrecordrepository.PayingAgent_Coupon,
+		OrderAmount:      in.OrderAmount,
+		PayAmount:        in.OrderAmount - payQRCodeModel.Amount,
+		PayId:            paymentrecord.PayIdGenerator(),
+		PayParam:         "",
+		UserId:           in.UserId,
+		ClientIp:         "127.0.0.1",
+		RecipientAccount: payQRCodeModel.RecipientAccount,
+		RecipientName:    payQRCodeModel.RecipientName,
+		PaymentAccount:   "compon",
+		PaymentName:      "compon",
+		PayUrl:           "http://coupon.pay.com",
+		NotifyUrl:        "",
+		ReturnUrl:        "",
+		Remark:           "优惠券支付",
+	}
+
+	err = payrecordService.Create(payRecordInForQRPay, payRecordInForCoupon)
 	if err != nil {
 		return nil, err
 	}
 
-	out = &PayOrder{
-		PayId:       payOrderIn.PayId,
-		OrderId:     payOrderIn.OrderId,
-		OrderPrice:  payOrderIn.Price,
-		PaidPrice:   payOrderIn.PaidPrice,
-		PayUrl:      payOrderIn.PayUrl,
-		AnyAmount:   payOrderIn.AnyAmount,
-		State:       PayOrderState(payOrderIn.State),
-		Expire:      payOrderIn.Expire,
-		CreatedAt:   payOrderIn.CreatedAt,
-		PayingAgent: payOrderIn.PayingAgent,
-	}
 	return out, nil
 }
 
@@ -212,7 +189,7 @@ func (req *PayOrderCreateIn) Validate() error {
 	if req.OrderId == "" {
 		return errors.New("请传入商户订单号")
 	}
-	payingAgent := cast.ToInt(req.PayingAgent)
+	payingAgent := cast.ToInt(req.PayAgent)
 	// 验证type
 	if payingAgent == 0 {
 		return errors.New("请传入支付方式=>1|微信 2|支付宝")
@@ -246,168 +223,55 @@ func Signature(payID, param string, payingAgent string, price int, key string) s
 	return hex.EncodeToString(hash[:])
 }
 
-// OrderIDGenerator 生成订单ID（格式：YYYYMMDDHHMMSS + 4位随机数）
-func OrderIDGenerator() string {
-	// 设置随机数种子
-	rand.Seed(time.Now().UnixNano())
-
-	// 生成时间部分（格式：YYYYMMDDHHMMSS）
-	timePart := time.Now().Format("20060102150405")
-
-	// 生成4位随机数（1-9之间的数字）
-	randPart := fmt.Sprintf("%d%d%d%d",
-		rand.Intn(9)+1,
-		rand.Intn(9)+1,
-		rand.Intn(9)+1,
-		rand.Intn(9)+1)
-
-	// 组合订单ID
-	return timePart + randPart
-}
-
 // GetOrderPayInfo 获取订单支付信息
-func (s PayOrderService) GetOrderPayInfo(orderId string) (payOrders PayOrders, err error) {
-	r := model.NewPayOrderRepository()
-	models, err := r.GetByOrderId(orderId)
+func (s PayOrderService) GetOrderPayInfo(orderId string) (models paymentrecordrepository.PayRecordModels, err error) {
+	payrecordService := getPayRecordSerivce()
+	models, err = payrecordService.GetOrderPayInfo(orderId)
 	if err != nil {
 		return nil, err
 	}
-	for _, v := range models {
-		payOrder := PayOrder{
-			PayId:      v.PayId,
-			OrderId:    v.OrderId,
-			OrderPrice: v.Price,
-			PaidPrice:  v.PaidPrice,
-			PayUrl:     v.PayUrl,
-			AnyAmount:  v.AnyAmount,
-			State:      PayOrderState(v.State),
-			Expire:     v.Expire,
-		}
-		payOrders = append(payOrders, payOrder)
-	}
-	return payOrders, nil
+	return models, nil
 }
 
 // Pay 支付订单
-func (s PayOrderService) Pay(payId string) (err error) {
-	r := model.NewPayOrderRepository()
-	model, err := r.GetByPayIdMust(payId)
-	if err != nil {
-		return err
+func (s PayOrderService) Pay(payAmount int, payAgent string) (err error) {
+	payrecordService := getPayRecordSerivce()
+	fs := sqlbuilder.Fields{
+		paymentrecordrepository.NewPayAmount(payAmount),
+		paymentrecordrepository.NewPayAgent(payAgent),
+		paymentrecordrepository.NewState(paymentrecordrepository.PayOrderModel_state_paid.String()).Apply(func(f *sqlbuilder.Field, fs ...*sqlbuilder.Field) {
+			f.SetOrderFn(sqlbuilder.OrderFnDesc)
+		}),
 	}
-	stateFSM := NewPayOrderStateMachine(PayOrderState(model.State))
-	err = stateFSM.CanPay()
-	if err != nil {
-		return err
-	}
-	err = r.Pay(model.PayId, PayOrderModel_state_paid.String(), model.State)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s PayOrderService) IsPaid(orderId string) (ok bool, err error) {
-	records, err := s.GetOrderPayInfo(orderId)
-	if err != nil {
-		return false, err
-	}
-	payFinished := records.IsPayFinished()
-	return payFinished, nil
-}
-
-// CloseByOrderId 关闭订单支付，当订单关闭时，关闭订单对应的支付单
-func (s PayOrderService) CloseByOrderId(orderId string) (err error) {
-	records, err := s.GetOrderPayInfo(orderId)
+	model, err := payrecordService.GetFirstPayRecordByConditon(fs)
 	if err != nil {
 		return err
 	}
 
-	r := model.NewPayOrderRepository()
-	closeBatchIn := make([]model.CloseIn, 0)
-	for _, v := range records {
-		closeIn := model.CloseIn{PayId: v.PayId, NewState: string(PayOrderModel_state_closed), OldState: v.State.String()}
-		closeBatchIn = append(closeBatchIn, closeIn)
+	payIn := paymentrecord.PayIn{
+		PayId: model.PayId,
+	}
+	_, err = payrecordService.Pay(payIn)
+	if err != nil {
+		return err
+	}
+	//用户支付成功后，优惠券自动支付,保证整个订单支付完成
+	couponFs := sqlbuilder.Fields{
+		paymentrecordrepository.NewOrderId(model.OrderId),
+		paymentrecordrepository.NewPayAgent(paymentrecordrepository.PayingAgent_Coupon),
+		paymentrecordrepository.NewState(paymentrecordrepository.PayOrderModel_state_paid.String()).Apply(func(f *sqlbuilder.Field, fs ...*sqlbuilder.Field) {
+			f.SetOrderFn(sqlbuilder.OrderFnDesc)
+		}),
+	}
+	couponModel, err := payrecordService.GetFirstPayRecordByConditon(couponFs)
+	if err != nil {
+		return err
+	}
+	componPayIn := paymentrecord.PayIn{
+		PayId: couponModel.PayId,
 	}
 
-	err = r.CloseBatch(closeBatchIn...)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s PayOrderService) GetByPayId(payId string) (payOrder *PayOrder, err error) {
-	r := model.NewPayOrderRepository()
-	model, err := r.GetByPayIdMust(payId)
-	if err != nil {
-		return nil, err
-	}
-	out := &PayOrder{
-		PayId:       model.PayId,
-		OrderId:     model.OrderId,
-		OrderPrice:  model.Price,
-		PaidPrice:   model.PaidPrice,
-		PayUrl:      model.PayUrl,
-		AnyAmount:   model.AnyAmount,
-		State:       PayOrderState(model.State),
-		Expire:      model.Expire,
-		CreatedAt:   model.CreatedAt,
-		PayingAgent: model.PayingAgent,
-	}
-	return out, nil
-}
-
-func (s PayOrderService) CloseByPayId(payId string) (err error) {
-	record, err := s.GetByPayId(payId)
-	if err != nil {
-		return err
-	}
-	stateFSM := record.GetStateFSM()
-	err = stateFSM.CanPay()
-	if err != nil {
-		return err
-	}
-
-	r := model.NewPayOrderRepository()
-	err = r.CloseByPayId(record.PayId, PayOrderModel_state_paid.String(), record.State.String())
-	if err != nil {
-		return err
-	}
-	return nil
-}
-func (s PayOrderService) ExpiredByPayId(payId string) (err error) {
-	record, err := s.GetByPayId(payId)
-	if err != nil {
-		return err
-	}
-	stateFSM := record.GetStateFSM()
-	err = stateFSM.CanExpire()
-	if err != nil {
-		return err
-	}
-
-	r := model.NewPayOrderRepository()
-	err = r.CloseByPayId(record.PayId, PayOrderModel_state_expired.String(), record.State.String())
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (s PayOrderService) Failed(payId string) (err error) {
-	record, err := s.GetByPayId(payId)
-	if err != nil {
-		return err
-	}
-	stateFSM := record.GetStateFSM()
-	err = stateFSM.CanPay()
-	if err != nil {
-		return err
-	}
-
-	r := model.NewPayOrderRepository()
-	err = r.Failed(record.PayId, PayOrderModel_state_failed.String(), record.State.String())
+	_, err = payrecordService.Pay(componPayIn)
 	if err != nil {
 		return err
 	}
