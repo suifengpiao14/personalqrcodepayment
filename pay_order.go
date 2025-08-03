@@ -6,12 +6,21 @@ import (
 	"errors"
 	"strconv"
 
+	"github.com/skip2/go-qrcode"
 	"github.com/spf13/cast"
 	"github.com/suifengpiao14/paymentrecord"
 	paymentrecordrepository "github.com/suifengpiao14/paymentrecord/repository"
 	"github.com/suifengpiao14/personalqrcodepayment/model"
 	"github.com/suifengpiao14/sqlbuilder"
 )
+
+func MakeQRcode(content string) (png []byte, err error) {
+	png, err = qrcode.Encode(content, qrcode.Medium, 256)
+	if err != nil {
+		return nil, err
+	}
+	return png, nil
+}
 
 type PayOrderService struct {
 	config Config
