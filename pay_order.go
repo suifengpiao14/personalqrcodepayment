@@ -2,6 +2,7 @@ package personalqrcodepayment
 
 import (
 	"crypto/md5"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"strconv"
@@ -14,12 +15,14 @@ import (
 	"github.com/suifengpiao14/sqlbuilder"
 )
 
-func MakeQRcode(content string) (png []byte, err error) {
-	png, err = qrcode.Encode(content, qrcode.Medium, 256)
+func MakeQRcodeBase64(content string) (encoded string, err error) {
+	png, err := qrcode.Encode(content, qrcode.Medium, 256)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return png, nil
+	// Base64 编码
+	encoded = base64.StdEncoding.EncodeToString(png)
+	return encoded, nil
 }
 
 type PayOrderService struct {
