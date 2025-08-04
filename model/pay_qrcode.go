@@ -22,8 +22,8 @@ type PayQRCodeModel struct {
 	RecipientAccount string `json:"recipientAccount" gorm:"column:Frecipient_account"`
 	RecipientName    string `json:"recipientName" gorm:"column:Frecipient_name"`
 	PayUrl           string `json:"pay_url" gorm:"column:Fpay_url"`
-	Amount           int    `json:"amount" gorm:"column:Famount"`
-	PayAgent         string `json:"payAgent" gorm:"column:FpayAgent"`
+	PayAmount        int    `json:"payAmount" gorm:"column:Fpay_amount"`
+	PayAgent         string `json:"payAgent" gorm:"column:Fpay_agent"`
 	LockKey          string `json:"lockKey" gorm:"column:Flock_key"`
 	CreatedAt        string `json:"createdAt" gorm:"column:Fcreated_at"`
 	UpdatedAt        string `json:"updatedAt" gorm:"column:Fupdated_at"`
@@ -35,7 +35,7 @@ var table_pay_qrcode = sqlbuilder.NewTableConfig("pay_qrcode").WithHandler(DBHan
 	sqlbuilder.NewColumn("Frecipient_name", sqlbuilder.GetField(paymentrecordrepository.NewRecipientName)),
 	sqlbuilder.NewColumn("Flock_key", sqlbuilder.GetField(NewLockKey)),
 	sqlbuilder.NewColumn("Fpay_url", sqlbuilder.GetField(paymentrecordrepository.NewPayUrl)),
-	sqlbuilder.NewColumn("Famount", sqlbuilder.GetField(paymentrecordrepository.NewPayAmount)),
+	sqlbuilder.NewColumn("Fpay_amount", sqlbuilder.GetField(paymentrecordrepository.NewPayAmount)),
 	sqlbuilder.NewColumn("Fpay_agent", sqlbuilder.GetField(paymentrecordrepository.NewPayAgent)),
 	sqlbuilder.NewColumn("Fcreated_at", sqlbuilder.GetField(paymentrecordrepository.NewCreatedAt)),
 	sqlbuilder.NewColumn("Fupdated_at", sqlbuilder.GetField(paymentrecordrepository.NewUpdatedAt)),

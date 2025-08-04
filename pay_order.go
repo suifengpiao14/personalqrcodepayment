@@ -112,11 +112,12 @@ type PayOrderCreateIn struct {
 	PayId            string `json:"payId"`
 	OrderId          string `json:"orderId"`
 	RecipientAccount string `json:"recipientAccount"` // 收款人ID
+	RecipientName    string `json:"recipientName"`    // 收款姓名
 	PayAgent         string `json:"payAgent"`         // 支付机构 weixin:微信 alipay:支付宝
 	OrderAmount      int    `json:"orderPrice"`       // 订单金额，单位分
 	UserId           string `json:"userId"`
 	Sign             string `json:"sign"`
-	Param            string `json:"param"`
+	PayParam         string `json:"payParam"`
 	PaymentAccount   string `json:"paymentAccount"`
 	PaymentName      string `json:"paymentName"`
 }
@@ -133,7 +134,7 @@ func (s PayOrderService) Create(in PayOrderCreateIn) (out *PayOrder, err error) 
 	}
 	cfg := s.config
 	// 验证签名
-	if in.Sign != Signature(in.OrderId, in.Param, in.PayAgent, in.OrderAmount, cfg.Key) {
+	if in.Sign != Signature(in.OrderId, in.PayParam, in.PayAgent, in.OrderAmount, cfg.Key) {
 		return nil, errors.New("签名验证失败")
 	}
 	settingService := model.NewSettingService()
@@ -152,7 +153,7 @@ func (s PayOrderService) Create(in PayOrderCreateIn) (out *PayOrder, err error) 
 		OrderId:          in.OrderId,
 		PayAgent:         payQRCodeModel.PayAgent,
 		OrderAmount:      in.OrderAmount,
-		PayAmount:        payQRCodeModel.Amount,
+		PayAmount:        payQRCodeModel.PayAmount,
 		Expire:           expire,
 		PayId:            paymentrecord.PayIdGenerator(),
 		PayParam:         "",
@@ -172,7 +173,7 @@ func (s PayOrderService) Create(in PayOrderCreateIn) (out *PayOrder, err error) 
 		OrderId:          in.OrderId,
 		PayAgent:         paymentrecordrepository.PayingAgent_Coupon,
 		OrderAmount:      in.OrderAmount,
-		PayAmount:        in.OrderAmount - payQRCodeModel.Amount,
+		PayAmount:        in.OrderAmount - payQRCodeModel.PayAmount,
 		PayId:            paymentrecord.PayIdGenerator(),
 		PayParam:         "",
 		UserId:           in.UserId,

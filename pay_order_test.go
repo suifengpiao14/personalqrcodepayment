@@ -19,7 +19,7 @@ func TestCrate(t *testing.T) {
 		PayAgent:    personalqrcodepayment.PayingAgent_Wechat,
 		OrderAmount: 10000,
 		Sign:        "54845",
-		Param:       `{"userId":"1234","userName":"hah","prodcutId":"157485"}`,
+		PayParam:    `{"userId":"1234","userName":"hah","prodcutId":"157485"}`,
 	}
 	payOrderService.Create(payOrderIn)
 
