@@ -42,12 +42,12 @@ var table_pay_qrcode = sqlbuilder.NewTableConfig("pay_qrcode").WithHandler(DBHan
 )
 
 type PayQRCodeRepository struct {
-	repository sqlbuilder.Repository[PayQRCodeModel]
+	repository sqlbuilder.Repository
 }
 
 func NewPayQRCodeRepository() PayQRCodeRepository {
 	return PayQRCodeRepository{
-		repository: sqlbuilder.NewRepository[PayQRCodeModel](table_pay_qrcode),
+		repository: sqlbuilder.NewRepository(table_pay_qrcode),
 	}
 }
 
@@ -75,10 +75,11 @@ func (s PayQRCodeRepository) LockQRCodeByOrderId(orderId string, recipientAccoun
 		NewLockKey(orderId).AppendWhereFn(sqlbuilder.ValueFnForward),
 		paymentrecordrepository.NewPayAgent(payAgent).AppendWhereFn(sqlbuilder.ValueFnForward),
 	}
-	payQRCodeModel, exists, err := s.repository.First(getFs)
+	payQRCodeModelRef = &PayQRCodeModel{}
+	exists, err := s.repository.First(payQRCodeModelRef, getFs)
 	if !exists {
 		err = errors.New("符合条件的支付码全被占用，请稍后重试")
 		return nil, err
 	}
-	return &payQRCodeModel, nil
+	return payQRCodeModelRef, nil
 }
