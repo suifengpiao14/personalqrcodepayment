@@ -86,8 +86,8 @@ github.com/suifengpiao14/memorytable v0.1.2 h1:8cmb5ENp4x47mzS2qXVtE/IOaSvlnf+Hu
 github.com/suifengpiao14/memorytable v0.1.2/go.mod h1:QP3CaseStArE8ocsgu5U6XtMeWeDdoqh0Le6FstDSaY=
 github.com/suifengpiao14/paymentrecord v0.0.0-20250803044550-b9adc853dbe0 h1:uQcxt7xet8/mHZAz6m8m/9o1z1/xpovlyRvaU37vWUY=
 github.com/suifengpiao14/paymentrecord v0.0.0-20250803044550-b9adc853dbe0/go.mod h1:rAcpDxUIvyYdhgxbls3gLASS+eFQXHMUSxUHiGw1kEU=
-github.com/suifengpiao14/sqlbuilder v0.2.0 h1:QItuLJUruUi+uUfLp65Z+kTa7GzjhENUzx8w8pWrEzw=
-github.com/suifengpiao14/sqlbuilder v0.2.0/go.mod h1:dNKvJcN+3swydJHz0z2nP+9wlsT8sIAEhCWZSo8jLNI=
+github.com/suifengpiao14/sqlbuilder v0.2.1 h1:yy1eCJbE8DDwCIZu5wYqM+FxxXo4f4XYbRkL3+JPUeY=
+github.com/suifengpiao14/sqlbuilder v0.2.1/go.mod h1:dNKvJcN+3swydJHz0z2nP+9wlsT8sIAEhCWZSo8jLNI=
 github.com/suifengpiao14/sshmysql v0.0.6 h1:y/evOXJhTZRDFRGXPLzkRzwRZ+pWIuakWr5BX3h51/c=
 github.com/suifengpiao14/sshmysql v0.0.6/go.mod h1:YvD7LCCDjrK/zr1YkiCGZK5ETDevY9NKsQkJ2XDRb5Y=
 gitlab.huishoubao.com/gopackage/keyvalue v0.0.8 h1:AKTfaYqVR4HHNeX06di/ALoP5sM52OVyQ0OHrh+GKao=

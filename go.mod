@@ -9,7 +9,7 @@ require (
 	github.com/spf13/cast v1.9.2
 	github.com/suifengpiao14/commonlanguage v0.0.19
 	github.com/suifengpiao14/paymentrecord v0.0.0-20250803044550-b9adc853dbe0
-	github.com/suifengpiao14/sqlbuilder v0.2.0
+	github.com/suifengpiao14/sqlbuilder v0.2.1
 	gitlab.huishoubao.com/gopackage/keyvalue v0.0.8
 )
 
