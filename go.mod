@@ -10,7 +10,7 @@ require (
 	github.com/suifengpiao14/commonlanguage v0.0.19
 	github.com/suifengpiao14/paymentrecord v0.0.0-20250803044550-b9adc853dbe0
 	github.com/suifengpiao14/sqlbuilder v0.3.0
-	gitlab.huishoubao.com/gopackage/keyvalue v0.0.8
+	gitlab.huishoubao.com/gopackage/keyvalue v0.0.12
 )
 
 require (

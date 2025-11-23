@@ -105,8 +105,8 @@ github.com/suifengpiao14/sqlbuilder v0.3.0 h1:PrmbqOVkJMe+MrSzBKYn5yr77HM2lNYr+D
 github.com/suifengpiao14/sqlbuilder v0.3.0/go.mod h1:spqmCwHvqGS4H8k3rX0Zkuw+VwGlHdvpFS95R+31hhI=
 github.com/suifengpiao14/sshmysql v0.0.7 h1:PEBvDQr71ZYsF48Yf4CdkZROWnmU5CEBWqY2t0CHgas=
 github.com/suifengpiao14/sshmysql v0.0.7/go.mod h1:YvD7LCCDjrK/zr1YkiCGZK5ETDevY9NKsQkJ2XDRb5Y=
-gitlab.huishoubao.com/gopackage/keyvalue v0.0.8 h1:AKTfaYqVR4HHNeX06di/ALoP5sM52OVyQ0OHrh+GKao=
-gitlab.huishoubao.com/gopackage/keyvalue v0.0.8/go.mod h1:6sFTvKTRtJjHscvDdwXFd26eEO8ykcgaMOA7jf80lXc=
+gitlab.huishoubao.com/gopackage/keyvalue v0.0.12 h1:S1Q4AibrYz2Hjv5cG9NhoMts7/K4w2Ah0KDQWSmy4bc=
+gitlab.huishoubao.com/gopackage/keyvalue v0.0.12/go.mod h1:eyHIsIwRJ+IOOoqYpp1ny6+0jXqj9srtGWe6SloUE4Y=
 gitlab.huishoubao.com/gopackage/statemachine v0.0.0-20250731101948-83ea3d886f30 h1:gc0ESagD59FxJiWwsefYc/KkGmsk1E8GYN+/ttS9rHk=
 gitlab.huishoubao.com/gopackage/statemachine v0.0.0-20250731101948-83ea3d886f30/go.mod h1:SQZSBaJXlZ0WLh3Gpm5mh4wkYRanHFPsFQLg4sgU1KM=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=

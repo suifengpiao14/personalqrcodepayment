@@ -42,11 +42,8 @@ type SettingSerivce struct {
 }
 
 func NewSettingService() *SettingSerivce {
-	dbColumnRefer := keyvalue.KeyValueDbColumnRefer{
-		Key:   "vkey",
-		Value: "vvalue",
-	}
-	kvservice := keyvalue.NewKeyValueService(getTableSetting(), dbColumnRefer)
+
+	kvservice := keyvalue.NewKeyValueService(getTableSetting())
 	service := &SettingSerivce{kvservice}
 	return service
 }
