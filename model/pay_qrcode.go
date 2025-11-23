@@ -60,9 +60,9 @@ func (s PayQRCodeRepository) LockQRCodeByOrderId(orderId string, recipientAccoun
 			f.SetOrderFn(sqlbuilder.OrderFnDesc)                      // 倒序查询，确保锁定的二维码金额和实际金额最接近
 		}).SetMinimum(1), // 最小金额为1分
 		NewLockKey(orderId).Apply(func(f *sqlbuilder.Field, fs ...*sqlbuilder.Field) {
-			f.WhereFns.ResetSetValueFn(func(inputValue any, f *sqlbuilder.Field, fs ...*sqlbuilder.Field) (any, error) {
+			f.WhereFns.Append(sqlbuilder.ValueFnApiFormat(func(inputValue any, f *sqlbuilder.Field, fs ...*sqlbuilder.Field) (any, error) {
 				return "", nil // 查询条件的值改成空字符串,即查找未锁定的记录，增加锁
-			})
+			}))
 		}),
 		commonlanguage.NewUpdateLimit(1), // 只锁定一条记录即可
 	}

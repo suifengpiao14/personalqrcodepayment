@@ -27,7 +27,7 @@ CREATE TABLE `setting` (
 ('zfbpay', '');
 */
 
-var DBHander = sqlbuilder.NewGormHandler(sqlbuilder.GormDBForSqlite3)
+var DBHander = sqlbuilder.NewGormHandler(sqlbuilder.DB2Gorm(sqlbuilder.GetDB, nil))
 
 func getTableSetting() sqlbuilder.TableConfig {
 	var table_setting = sqlbuilder.NewTableConfig("setting").WithHandler(DBHander).AddColumns(
