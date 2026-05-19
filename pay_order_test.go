@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/suifengpiao14/personalqrcodepayment"
-	"github.com/suifengpiao14/sqlbuilder"
+	"gitlab.huishoubao.com/gopackage/sqlbuilder"
 )
 
 func init() {

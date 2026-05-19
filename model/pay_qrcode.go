@@ -1,11 +1,12 @@
 package model
 
 import (
+	"context"
 	"errors"
 
-	"github.com/suifengpiao14/commonlanguage"
 	paymentrecordrepository "github.com/suifengpiao14/paymentrecord/repository"
-	"github.com/suifengpiao14/sqlbuilder"
+	"gitlab.huishoubao.com/gopackage/commonlanguage"
+	"gitlab.huishoubao.com/gopackage/sqlbuilder"
 )
 
 /*
@@ -66,7 +67,7 @@ func (s PayQRCodeRepository) LockQRCodeByOrderId(orderId string, recipientAccoun
 		}),
 		commonlanguage.NewUpdateLimit(1), // 只锁定一条记录即可
 	}
-	err = s.repository.Update(fs)
+	err = s.repository.Update(context.Background(), fs)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +77,7 @@ func (s PayQRCodeRepository) LockQRCodeByOrderId(orderId string, recipientAccoun
 		paymentrecordrepository.NewPayAgent(payAgent).AppendWhereFn(sqlbuilder.ValueFnForward),
 	}
 	payQRCodeModelRef = &PayQRCodeModel{}
-	exists, err := s.repository.First(payQRCodeModelRef, getFs)
+	exists, err := s.repository.First(context.Background(), payQRCodeModelRef, getFs)
 	if !exists {
 		err = errors.New("符合条件的支付码全被占用，请稍后重试")
 		return nil, err

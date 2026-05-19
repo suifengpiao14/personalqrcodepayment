@@ -1,8 +1,8 @@
 package model
 
 import (
-	"github.com/suifengpiao14/sqlbuilder"
 	"gitlab.huishoubao.com/gopackage/keyvalue"
+	"gitlab.huishoubao.com/gopackage/sqlbuilder"
 )
 
 /*

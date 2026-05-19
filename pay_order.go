@@ -1,6 +1,7 @@
 package personalqrcodepayment
 
 import (
+	"context"
 	"crypto/md5"
 	"encoding/base64"
 	"encoding/hex"
@@ -12,7 +13,7 @@ import (
 	"github.com/suifengpiao14/paymentrecord"
 	paymentrecordrepository "github.com/suifengpiao14/paymentrecord/repository"
 	"github.com/suifengpiao14/personalqrcodepayment/model"
-	"github.com/suifengpiao14/sqlbuilder"
+	"gitlab.huishoubao.com/gopackage/sqlbuilder"
 )
 
 func MakeQRcodeBase64(content string) (encoded string, err error) {
@@ -253,10 +254,10 @@ func (s PayOrderService) Pay(payAmount int, payAgent string) (err error) {
 		paymentrecordrepository.NewPayAmount(payAmount),
 		paymentrecordrepository.NewPayAgent(payAgent),
 		paymentrecordrepository.NewState(paymentrecordrepository.PayOrderModel_state_paid.String()).Apply(func(f *sqlbuilder.Field, fs ...*sqlbuilder.Field) {
-			f.SetOrderFn(sqlbuilder.OrderFnDesc)
+			f.WithOrderFn(1, sqlbuilder.OrderFnDesc)
 		}),
 	}
-	model, err := payrecordService.GetFirstPayRecordByConditon(fs)
+	model, err := payrecordService.GetFirstPayRecordByConditon(context.Background(), fs)
 	if err != nil {
 		return err
 	}
@@ -276,7 +277,7 @@ func (s PayOrderService) Pay(payAmount int, payAgent string) (err error) {
 			f.SetOrderFn(sqlbuilder.OrderFnDesc)
 		}),
 	}
-	couponModel, err := payrecordService.GetFirstPayRecordByConditon(couponFs)
+	couponModel, err := payrecordService.GetFirstPayRecordByConditon(context.Background(), couponFs)
 	if err != nil {
 		return err
 	}
